@@ -27,7 +27,7 @@
 import Foundation
 
 /// Filters to redact senstive information or otherwise manipulate the request/response.
-public struct Filter {
+open class Filter {
 
     /// Describes the desired filter behavior
     public enum FilterBehavior {
@@ -54,7 +54,7 @@ public struct Filter {
 
     // MARK: Internal Methods
 
-    func filterHeaders(for request: inout URLRequest) {
+    final func filterHeaders(for request: inout URLRequest) {
         // return early if request has no headers
         guard request.allHTTPHeaderFields != nil else {
             return
@@ -74,7 +74,7 @@ public struct Filter {
         }
     }
 
-    func filterHeaders(for response: inout Foundation.URLResponse) {
+    final func filterHeaders(for response: inout Foundation.URLResponse) {
         // return early if response is not HTTPURLResponse or has no headers
         guard let httpResponse = response as? Foundation.HTTPURLResponse,
               httpResponse.allHeaderFields.isEmpty == false else {
@@ -102,7 +102,7 @@ public struct Filter {
         ) ?? response
     }
 
-    func filterQueryParams(for request: inout URLRequest) {
+    final func filterQueryParams(for request: inout URLRequest) {
         // return early if request has no query params
         guard let url = request.url,
               var components = URLComponents(url: url, resolvingAgainstBaseURL: false),
@@ -130,7 +130,7 @@ public struct Filter {
         request.url = components.url
     }
 
-    func filterPostParams(for request: inout URLRequest) {
+    final func filterPostParams(for request: inout URLRequest) {
         // return early if request is not a POST or has no body params
         guard request.httpMethod == "POST",
               let httpBody = request.httpBody,
@@ -140,7 +140,7 @@ public struct Filter {
         // TODO: needs to account for different ways of encoding form data
     }
 
-    func filter(request: URLRequest) -> URLRequest {
+    final func filter(request: URLRequest) -> URLRequest {
         var filtered = request
         filterHeaders(for: &filtered)
         filterQueryParams(for: &filtered)
@@ -149,7 +149,7 @@ public struct Filter {
         return filtered
     }
 
-    func filter(response: Foundation.URLResponse, withData data: Data?) -> (Foundation.URLResponse, Data?)? {
+    final func filter(response: Foundation.URLResponse, withData data: Data?) -> (Foundation.URLResponse, Data?)? {
         var filtered = response
         var filteredData = data
         filterHeaders(for: &filtered)
