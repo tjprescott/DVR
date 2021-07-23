@@ -7,8 +7,6 @@ final class SessionDataTask: URLSessionDataTask {
 
     typealias Completion = (Data?, Foundation.URLResponse?, NSError?) -> Void
 
-    
-
     // MARK: - Properties
 
     var session: Session!
@@ -44,7 +42,10 @@ final class SessionDataTask: URLSessionDataTask {
     override func resume() {
 
         // apply request transformations, which could impact matching the interaction
-        let filteredRequest = session.filter.filter(request: request)
+        var filteredRequest = request
+        session.filters.forEach { filter in
+            filteredRequest = filter.filter(request: filteredRequest)
+        }
 
         if session.recordMode != .all {
             let cassette = session.cassette
@@ -96,12 +97,24 @@ final class SessionDataTask: URLSessionDataTask {
             }
             
             // Create interaction unless the response has been filtered out
-            if let (filteredResponse, filteredData) = this.session.filter.filter(response: response, withData: data) {
-                // persist the interaction
+            var filteredResponse = response
+            var filteredData = data
+            var persistInteraction = true
+
+            for filter in this.session.filters {
+                if let result = filter.filter(response: filteredResponse, withData: filteredData) {
+                    (filteredResponse, filteredData) = result
+                } else {
+                    // do not persist the interaction if the filtered response was nil
+                    persistInteraction = false
+                    break
+                }
+            }
+
+            if persistInteraction {
                 this.interaction = Interaction(request: filteredRequest, response: filteredResponse, responseData: filteredData)
                 this.session.finishTask(this, interaction: this.interaction!, playback: false)
             } else {
-                // do not persist the interaction if the filtered response was nil
                 this.interaction = Interaction(request: filteredRequest, response: response, responseData: data)
                 this.session.finishTask(this, interaction: this.interaction!, playback: true)
             }
