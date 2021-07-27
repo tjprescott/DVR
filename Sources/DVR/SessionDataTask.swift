@@ -42,15 +42,21 @@ final class SessionDataTask: URLSessionDataTask {
     override func resume() {
 
         // apply request transformations, which could impact matching the interaction
-        var filteredRequest = request
-        session.filters.forEach { filter in
-            filteredRequest = filter.filter(request: filteredRequest)
+        var filteredRequest: URLRequest? = request
+        for filter in session.filters {
+            guard let filtered = filter.filter(request: filteredRequest) else {
+                break
+            }
+            filteredRequest = filtered
         }
-
-        if session.recordMode != .all {
+        
+        
+        FindInteraction: if session.recordMode != .all {
             let cassette = session.cassette
-
             // Find interaction
+            guard let filteredRequest = filteredRequest else {
+                break FindInteraction
+            }
             if let interaction = session.cassette?.interactionForRequest(filteredRequest, headersToCheck: headersToCheck) {
                 self.interaction = interaction
                 // Forward completion
@@ -111,12 +117,15 @@ final class SessionDataTask: URLSessionDataTask {
                 }
             }
 
+            if filteredRequest == nil {
+                persistInteraction = false
+            }
+            
             if persistInteraction {
-                this.interaction = Interaction(request: filteredRequest, response: filteredResponse, responseData: filteredData)
+                this.interaction = Interaction(request: filteredRequest!, response: filteredResponse, responseData: filteredData)
                 this.session.finishTask(this, interaction: this.interaction!, playback: false)
             } else {
-                this.interaction = Interaction(request: filteredRequest, response: response, responseData: data)
-                this.session.finishTask(this, interaction: this.interaction!, playback: true)
+                this.session.finishTask(this, responseData: filteredData, playback: true)
             }
         })
         task.resume()

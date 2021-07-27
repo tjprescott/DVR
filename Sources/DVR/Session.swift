@@ -163,6 +163,25 @@ open class Session: URLSession {
         }
     }
 
+    func finishTask(_ task: URLSessionTask, responseData: Data?, playback: Bool) {
+        needsPersistence = (needsPersistence || !playback)
+
+        if let index = outstandingTasks.firstIndex(of: task) {
+            outstandingTasks.remove(at: index)
+        }
+
+        if !recording && outstandingTasks.count == 0 {
+            finishRecording()
+        }
+
+        if let delegate = delegate as? URLSessionDataDelegate, let task = task as? URLSessionDataTask, let data = responseData {
+            delegate.urlSession?(self, dataTask: task, didReceive: data as Data)
+        }
+
+        if let delegate = delegate as? URLSessionTaskDelegate {
+            delegate.urlSession?(self, task: task, didCompleteWithError: nil)
+        }
+    }
 
     // MARK: - Private
 
