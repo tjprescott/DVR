@@ -42,16 +42,13 @@ final class SessionDataTask: URLSessionDataTask {
     override func resume() {
 
         // apply request transformations, which could impact matching the interaction
-        var filteredRequest = request
-        session.filters.forEach { filter in
-            filteredRequest = filter.filter(request: filteredRequest)
-        }
-
+        let filteredRequest = session.filter(request: request)
+        
         if session.recordMode != .all {
             let cassette = session.cassette
-
             // Find interaction
-            if let interaction = session.cassette?.interactionForRequest(filteredRequest, headersToCheck: headersToCheck) {
+            
+            if let filteredRequest = filteredRequest, let interaction = session.cassette?.interactionForRequest(filteredRequest, headersToCheck: headersToCheck) {
                 self.interaction = interaction
                 // Forward completion
                 if let completion = completion {
@@ -59,7 +56,7 @@ final class SessionDataTask: URLSessionDataTask {
                         completion(interaction.responseData, interaction.response, nil)
                     }
                 }
-                session.finishTask(self, interaction: interaction, playback: true)
+                session.finishTaskWithInteraction(self, interaction: interaction, playback: true)
                 return
             }
 
@@ -78,6 +75,8 @@ final class SessionDataTask: URLSessionDataTask {
             if session.recordingEnabled == false {
                 fatalError("[DVR] Recording is disabled.")
             }
+            
+            
         }
 
         let task = session.backingSession.dataTask(with: request, completionHandler: { [weak self] data, response, error in
@@ -97,29 +96,21 @@ final class SessionDataTask: URLSessionDataTask {
             }
             
             // Create interaction unless the response has been filtered out
-            var filteredResponse = response
-            var filteredData = data
-            var persistInteraction = true
-
-            for filter in this.session.filters {
-                if let result = filter.filter(response: filteredResponse, withData: filteredData) {
-                    (filteredResponse, filteredData) = result
-                } else {
-                    // do not persist the interaction if the filtered response was nil
-                    persistInteraction = false
-                    break
-                }
-            }
-
+    
+            let filteredResponse : (response: Foundation.URLResponse, data: Data?)? = this.session.filter(response: response, data: data)
+            
+            let persistInteraction = filteredResponse != nil && filteredRequest != nil
+            
             if persistInteraction {
-                this.interaction = Interaction(request: filteredRequest, response: filteredResponse, responseData: filteredData)
-                this.session.finishTask(this, interaction: this.interaction!, playback: false)
+                
+                if let interaction = this.interaction, let resp = filteredResponse?.response, let data = filteredResponse?.data {
+                    this.interaction = Interaction(request: filteredRequest!, response: resp, responseData: data)
+                    this.session.finishTaskWithInteraction(this, interaction: interaction, playback: false)
+                }
             } else {
-                this.interaction = Interaction(request: filteredRequest, response: response, responseData: data)
-                this.session.finishTask(this, interaction: this.interaction!, playback: true)
+                this.session.finishTaskWithoutInteraction(this, responseData: filteredResponse?.data)
             }
         })
         task.resume()
     }
 }
-

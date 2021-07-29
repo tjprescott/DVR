@@ -128,7 +128,26 @@ open class Session: URLSession {
         }
     }
 
-
+    // MARK: Filtering
+    
+    func filter(request: URLRequest) -> URLRequest? {
+        var filteredRequest: URLRequest? = request
+        for filter in filters {
+            guard let req = filteredRequest else { return nil }
+            filteredRequest = filter.filter(request: req)
+        }
+        return filteredRequest
+    }
+    
+    func filter(response: Foundation.URLResponse, data: Data?) -> (Foundation.URLResponse, Data?)? {
+        var filteredResponse = (response, data)
+        for filter in filters {
+            guard let res = filter.filter(response: filteredResponse.0, withData: filteredResponse.1) else { return nil }
+            filteredResponse = res
+        }
+        return filteredResponse
+    }
+    
     // MARK: - Internal
 
     var cassette: Cassette? {
@@ -141,8 +160,8 @@ open class Session: URLSession {
         return Cassette(dictionary: json)
     }
 
-    func finishTask(_ task: URLSessionTask, interaction: Interaction, playback: Bool) {
-        needsPersistence = (needsPersistence || !playback)
+    func finishTaskWithInteraction(_ task: URLSessionTask, interaction: Interaction, playback: Bool) {
+        needsPersistence = !playback
 
         if let index = outstandingTasks.firstIndex(of: task) {
             outstandingTasks.remove(at: index)
@@ -163,6 +182,25 @@ open class Session: URLSession {
         }
     }
 
+    func finishTaskWithoutInteraction(_ task: URLSessionTask, responseData: Data?) {
+        needsPersistence = false
+
+        if let index = outstandingTasks.firstIndex(of: task) {
+            outstandingTasks.remove(at: index)
+        }
+
+        if !recording && outstandingTasks.count == 0 {
+            finishRecording()
+        }
+
+        if let delegate = delegate as? URLSessionDataDelegate, let task = task as? URLSessionDataTask, let data = responseData {
+            delegate.urlSession?(self, dataTask: task, didReceive: data as Data)
+        }
+
+        if let delegate = delegate as? URLSessionTaskDelegate {
+            delegate.urlSession?(self, task: task, didCompleteWithError: nil)
+        }
+    }
 
     // MARK: - Private
 

@@ -48,7 +48,7 @@ open class Filter {
     /// a closure to call when processing each response
     public var beforeRecordResponse: ((Foundation.URLResponse, Data?) -> (Foundation.URLResponse, Data?)?)?
     /// a closure to call when processing each request
-    public var beforeRecordRequest: ((URLRequest) -> (URLRequest))?
+    public var beforeRecordRequest: ((URLRequest) -> (URLRequest?))?
     
     public init() {}
 
@@ -140,12 +140,15 @@ open class Filter {
         // TODO: needs to account for different ways of encoding form data
     }
 
-    final func filter(request: URLRequest) -> URLRequest {
+    final func filter(request: URLRequest) -> URLRequest? {
+        
         var filtered = request
         filterHeaders(for: &filtered)
         filterQueryParams(for: &filtered)
         filterPostParams(for: &filtered)
-        filtered = beforeRecordRequest?(filtered) ?? filtered
+        if let beforeRecordRequest = beforeRecordRequest  {
+            return beforeRecordRequest(filtered)
+        }
         return filtered
     }
 
