@@ -146,10 +146,10 @@ open class Filter {
         filterHeaders(for: &filtered)
         filterQueryParams(for: &filtered)
         filterPostParams(for: &filtered)
-        guard beforeRecordRequest != nil else {
-            return filtered
+        if let beforeRecordRequest = beforeRecordRequest  {
+            return beforeRecordRequest(filtered)
         }
-        return beforeRecordRequest!(filtered)
+        return filtered
     }
 
     final func filter(response: Foundation.URLResponse, withData data: Data?) -> (Foundation.URLResponse, Data?)? {
