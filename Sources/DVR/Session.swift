@@ -139,8 +139,13 @@ open class Session: URLSession {
         return filteredRequest
     }
     
-    func filter(response: Foundation.URLResponse, data: Data?) {
-        
+    func filter(response: Foundation.URLResponse, data: Data?) -> (Foundation.URLResponse, Data?)? {
+        var filteredResponse = (response, data)
+        for filter in filters {
+            guard let res = filter.filter(response: filteredResponse.0, withData: filteredResponse.1) else { return nil }
+            filteredResponse = res
+        }
+        return filteredResponse
     }
     
     // MARK: - Internal

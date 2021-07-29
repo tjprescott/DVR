@@ -96,29 +96,19 @@ final class SessionDataTask: URLSessionDataTask {
             }
             
             // Create interaction unless the response has been filtered out
-            var filteredResponse = response
-            var filteredData = data
-            var persistInteraction = true
-
-            for filter in this.session.filters {
-                if let result = filter.filter(response: filteredResponse, withData: filteredData) {
-                    (filteredResponse, filteredData) = result
-                } else {
-                    // do not persist the interaction if the filtered response was nil
-                    persistInteraction = false
-                    break
-                }
-            }
-
+    
+            let filteredResponse = this.session.filter(response: response, data: data)
+            
             let persistInteraction = filteredResponse != nil && filteredRequest != nil
             
             if persistInteraction {
-                this.interaction = Interaction(request: filteredRequest!, response: filteredResponse, responseData: filteredData)
-                if let interaction = this.interaction {
+                
+                if let interaction = this.interaction, let resp = filteredResponse?.0, let data = filteredResponse?.1 {
+                    this.interaction = Interaction(request: filteredRequest!, response: resp, responseData: data)
                     this.session.finishTaskAndPersist(this, interaction: interaction, playback: false)
                 }
             } else {
-                this.session.finishTaskAndDoNotPersist(this, responseData: filteredData, playback: true)
+                this.session.finishTaskAndDoNotPersist(this, responseData: filteredResponse?.1, playback: true)
             }
         })
         task.resume()
