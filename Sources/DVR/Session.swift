@@ -160,8 +160,8 @@ open class Session: URLSession {
         return Cassette(dictionary: json)
     }
 
-    func finishTaskAndPersist(_ task: URLSessionTask, interaction: Interaction, playback: Bool) {
-        needsPersistence = (needsPersistence || !playback)
+    func finishTaskWithInteraction(_ task: URLSessionTask, interaction: Interaction, playback: Bool) {
+        needsPersistence = !playback
 
         if let index = outstandingTasks.firstIndex(of: task) {
             outstandingTasks.remove(at: index)
@@ -182,8 +182,8 @@ open class Session: URLSession {
         }
     }
 
-    func finishTaskAndDoNotPersist(_ task: URLSessionTask, responseData: Data?, playback: Bool) {
-        needsPersistence = (needsPersistence || !playback)
+    func finishTaskWithoutInteraction(_ task: URLSessionTask, responseData: Data?) {
+        needsPersistence = false
 
         if let index = outstandingTasks.firstIndex(of: task) {
             outstandingTasks.remove(at: index)
