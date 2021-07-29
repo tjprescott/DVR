@@ -44,10 +44,12 @@ final class SessionDataTask: URLSessionDataTask {
         // apply request transformations, which could impact matching the interaction
         var filteredRequest: URLRequest? = request
         for filter in session.filters {
-            guard let filtered = filter.filter(request: filteredRequest) else {
+            if let req = filteredRequest {
+                filteredRequest = filter.filter(request: req)
+            }
+            else {
                 break
             }
-            filteredRequest = filtered
         }
         
         
@@ -123,7 +125,9 @@ final class SessionDataTask: URLSessionDataTask {
             
             if persistInteraction {
                 this.interaction = Interaction(request: filteredRequest!, response: filteredResponse, responseData: filteredData)
-                this.session.finishTask(this, interaction: this.interaction!, playback: false)
+                if let interaction = this.interaction {
+                    this.session.finishTask(this, interaction: interaction, playback: false)
+                }
             } else {
                 this.session.finishTask(this, responseData: filteredData, playback: true)
             }

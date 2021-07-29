@@ -140,11 +140,9 @@ open class Filter {
         // TODO: needs to account for different ways of encoding form data
     }
 
-    final func filter(request: URLRequest?) -> URLRequest? {
+    final func filter(request: URLRequest) -> URLRequest? {
         
-        guard var filtered = request else {
-            return nil
-        }
+        var filtered = request
         filterHeaders(for: &filtered)
         filterQueryParams(for: &filtered)
         filterPostParams(for: &filtered)
