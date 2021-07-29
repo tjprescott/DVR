@@ -119,9 +119,7 @@ final class SessionDataTask: URLSessionDataTask {
                 }
             }
 
-            if filteredRequest == nil {
-                persistInteraction = false
-            }
+            let persistInteraction = filteredResponse != nil && filteredRequest != nil
             
             if persistInteraction {
                 this.interaction = Interaction(request: filteredRequest!, response: filteredResponse, responseData: filteredData)
@@ -135,4 +133,3 @@ final class SessionDataTask: URLSessionDataTask {
         task.resume()
     }
 }
-
