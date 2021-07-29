@@ -128,7 +128,21 @@ open class Session: URLSession {
         }
     }
 
-
+    // MARK: Filtering
+    
+    func filter(request: URLRequest) -> URLRequest? {
+        var filteredRequest: URLRequest? = request
+        for filter in filters {
+            guard let req = filteredRequest else { return nil }
+            filteredRequest = filter.filter(request: req)
+        }
+        return filteredRequest
+    }
+    
+    func filter(response: Foundation.URLResponse, data: Data?) {
+        
+    }
+    
     // MARK: - Internal
 
     var cassette: Cassette? {
@@ -141,7 +155,7 @@ open class Session: URLSession {
         return Cassette(dictionary: json)
     }
 
-    func finishTask(_ task: URLSessionTask, interaction: Interaction, playback: Bool) {
+    func finishTaskAndPersist(_ task: URLSessionTask, interaction: Interaction, playback: Bool) {
         needsPersistence = (needsPersistence || !playback)
 
         if let index = outstandingTasks.firstIndex(of: task) {
@@ -163,7 +177,7 @@ open class Session: URLSession {
         }
     }
 
-    func finishTask(_ task: URLSessionTask, responseData: Data?, playback: Bool) {
+    func finishTaskAndDoNotPersist(_ task: URLSessionTask, responseData: Data?, playback: Bool) {
         needsPersistence = (needsPersistence || !playback)
 
         if let index = outstandingTasks.firstIndex(of: task) {

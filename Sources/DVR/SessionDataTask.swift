@@ -42,49 +42,40 @@ final class SessionDataTask: URLSessionDataTask {
     override func resume() {
 
         // apply request transformations, which could impact matching the interaction
-        var filteredRequest: URLRequest? = request
-        for filter in session.filters {
-            if let req = filteredRequest {
-                filteredRequest = filter.filter(request: req)
-            }
-            else {
-                break
-            }
-        }
-        
+        let filteredRequest = session.filter(request: request)
         
         if session.recordMode != .all {
             let cassette = session.cassette
             // Find interaction
-            if let filteredRequest = filteredRequest {
-                if let interaction = session.cassette?.interactionForRequest(filteredRequest, headersToCheck: headersToCheck) {
-                    self.interaction = interaction
-                    // Forward completion
-                    if let completion = completion {
-                        queue.async {
-                            completion(interaction.responseData, interaction.response, nil)
-                        }
+            
+            if let filteredRequest = filteredRequest, let interaction = session.cassette?.interactionForRequest(filteredRequest, headersToCheck: headersToCheck) {
+                self.interaction = interaction
+                // Forward completion
+                if let completion = completion {
+                    queue.async {
+                        completion(interaction.responseData, interaction.response, nil)
                     }
-                    session.finishTask(self, interaction: interaction, playback: true)
-                    return
                 }
-
-                // Errors unless playbackMode = .newEpisodes
-                if cassette != nil && session.recordMode != .newEpisodes {
-                    
-                    fatalError("[DVR] Invalid request. The request was not found in the cassette.")
-                }
-
-                // Errors if in playbackMode = .none
-                if cassette == nil && session.recordMode == .none {
-                    fatalError("[DVR] No Recording Found.")
-                }
-                
-                // Cassette is missing. Record.
-                if session.recordingEnabled == false {
-                    fatalError("[DVR] Recording is disabled.")
-                }
+                session.finishTaskAndPersist(self, interaction: interaction, playback: true)
+                return
             }
+
+            // Errors unless playbackMode = .newEpisodes
+            if cassette != nil && session.recordMode != .newEpisodes {
+                
+                fatalError("[DVR] Invalid request. The request was not found in the cassette.")
+            }
+
+            // Errors if in playbackMode = .none
+            if cassette == nil && session.recordMode == .none {
+                fatalError("[DVR] No Recording Found.")
+            }
+            
+            // Cassette is missing. Record.
+            if session.recordingEnabled == false {
+                fatalError("[DVR] Recording is disabled.")
+            }
+            
             
         }
 
@@ -126,10 +117,10 @@ final class SessionDataTask: URLSessionDataTask {
             if persistInteraction {
                 this.interaction = Interaction(request: filteredRequest!, response: filteredResponse, responseData: filteredData)
                 if let interaction = this.interaction {
-                    this.session.finishTask(this, interaction: interaction, playback: false)
+                    this.session.finishTaskAndPersist(this, interaction: interaction, playback: false)
                 }
             } else {
-                this.session.finishTask(this, responseData: filteredData, playback: true)
+                this.session.finishTaskAndDoNotPersist(this, responseData: filteredData, playback: true)
             }
         })
         task.resume()
