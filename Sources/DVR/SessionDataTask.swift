@@ -102,12 +102,13 @@ final class SessionDataTask: URLSessionDataTask {
             let persistInteraction = filteredResponse != nil && filteredRequest != nil
             
             if persistInteraction {
-                
-                if let interaction = this.interaction, let resp = filteredResponse?.response, let data = filteredResponse?.data {
-                    this.interaction = Interaction(request: filteredRequest!, response: resp, responseData: data)
-                    this.session.finishTaskWithInteraction(this, interaction: interaction, playback: false)
-                }
-            } else {
+                guard let resp = filteredResponse?.response else { return }
+                let data = filteredResponse?.data
+                this.interaction = Interaction(request: filteredRequest!, response: resp, responseData: data)
+                guard let interaction = this.interaction else { return }
+                this.session.finishTaskWithInteraction(this, interaction: interaction, playback: false)
+            }
+            else {
                 this.session.finishTaskWithoutInteraction(this, responseData: filteredResponse?.data)
             }
         })
